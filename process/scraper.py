@@ -81,6 +81,29 @@ def getThemes(id, db, themeModel):
 
 	return themeList
 
+#***********************************************************************************************************************************
+
+def getMoods(id, db, moodModel):
+
+	albumSidebarSoup = BeautifulSoup(getPage(getURL(id)).content, "html.parser", parse_only=SoupStrainer("div", class_="sidebar"))
+
+	moodList = []
+
+	for count,mood in enumerate(albumSidebarSoup.find_all("span", class_="mood")):
+		
+		moodNameCandidate = mood.text.strip()
+		r = re.search("(([a-z]+\-)+)[a-z]+\d+", mood.a.get('href'))
+		moodIdCandidate = r[0]
+
+		# if the mood doesn't already exist in the Theme model in db, add it and commit.
+		if moodModel.query.filter_by(name=moodNameCandidate).one_or_none() == None:
+			db.session.add(moodModel(id=moodIdCandidate, name=moodNameCandidate))
+			db.session.commit()
+
+		moodList.append([moodNameCandidate, moodIdCandidate])
+
+	return moodList
+
 
 #***********************************************************************************************************************************
 

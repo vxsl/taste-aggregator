@@ -32,6 +32,11 @@ body {
 	color:blue;
 }
 
+.album-title {
+
+	font-weight:bold!important;
+}
+
 .album-info {
 
 	width:100%;

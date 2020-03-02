@@ -25,6 +25,7 @@
 	  <tr style='background-color:#26221e; color:white'>
 	    <th>ALBUM</th>
 	    <th>THEMES</th>
+	    <th>MOODS</th>
 	    <th>SIMILAR</th`>
 	    <th>ID</th>
 	    <th>ADDED</th>
@@ -36,12 +37,21 @@
 			    	<a href="https://allmusic.com/album/{{album.id}}"> {{album.artist}} - {{album.title}} </a>
 			    </td>
 			    <td> 	    	
-			    	
-			    	{% for theme in themeDict[album.title] %}
 
-			    		<a href=''>{{theme}}</a>, 
+			    	{% for id,theme in themeDict[album.title] %}
+
+			    		<a href="https://allmusic.com/theme/{{id}}">{{theme}}</a>{{ "," if not loop.last }}
 
 			    	{% endfor %}
+
+			    </td>
+			    <td>
+			    	{% for id,mood in moodDict[album.title] %}
+
+			    		<a href="https://allmusic.com/mood/{{id}}">{{mood}}</a>{{ "," if not loop.last }}
+
+			    	{% endfor %}
+
 
 			    </td>
 			    <td></td>

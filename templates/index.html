@@ -24,7 +24,7 @@
 	<table class="album-info">
 	  <tr style='background-color:#26221e; color:white'>
 	    <th>ALBUM</th>
-	    <th>MOODS</th>
+	    <th>THEMES</th>
 	    <th>SIMILAR</th`>
 	    <th>ID</th>
 	    <th>ADDED</th>
@@ -37,9 +37,9 @@
 			    </td>
 			    <td> 	    	
 			    	
-			    	{% for mood in moodDict[album.title] %}
+			    	{% for theme in themeDict[album.title] %}
 
-			    		<a href=''>{{mood}}</a>, 
+			    		<a href=''>{{theme}}</a>, 
 
 			    	{% endfor %}
 

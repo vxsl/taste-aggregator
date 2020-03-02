@@ -60,26 +60,26 @@ def getPage(url):
 
 #******************************************d('t*****************************************************************************************
 
-def getMoods(id, db, moodModel):
+def getThemes(id, db, themeModel):
 
 	albumSidebarSoup = BeautifulSoup(getPage(getURL(id)).content, "html.parser", parse_only=SoupStrainer("div", class_="sidebar"))
 
-	moodList = []
+	themeList = []
 
-	for count,mood in enumerate(albumSidebarSoup.find_all("span", class_="theme")):
+	for count,theme in enumerate(albumSidebarSoup.find_all("span", class_="theme")):
 		
-		moodNameCandidate = mood.text.strip()
-		r = re.search("(([a-z]+\-)+)[a-z]+\d+", mood.a.get('href'))
-		moodIdCandidate = r[0]
+		themeNameCandidate = theme.text.strip()
+		r = re.search("(([a-z]+\-)+)[a-z]+\d+", theme.a.get('href'))
+		themeIdCandidate = r[0]
 
-		# if the mood doesn't already exist in the Mood model in db, add it and commit.
-		if moodModel.query.filter_by(name=moodNameCandidate).one_or_none() == None:
-			db.session.add(moodModel(id=moodIdCandidate, name=moodNameCandidate))
+		# if the theme doesn't already exist in the Theme model in db, add it and commit.
+		if themeModel.query.filter_by(name=themeNameCandidate).one_or_none() == None:
+			db.session.add(themeModel(id=themeIdCandidate, name=themeNameCandidate))
 			db.session.commit()
 
-		moodList.append([moodNameCandidate, moodIdCandidate])
+		themeList.append([themeNameCandidate, themeIdCandidate])
 
-	return moodList
+	return themeList
 
 
 #***********************************************************************************************************************************

@@ -8,7 +8,7 @@ from flask_admin.contrib.sqla import ModelView
 from datetime import datetime
 
 import process.scraper
-import process.updateMoodsDb
+import process.updateThemesDb
 
 from collections import defaultdict
 
@@ -20,7 +20,7 @@ app.config['SECRET_KEY'] = 'alpine'
 app.config['SQLALCHEMY_ECHO'] = True
 
 db = SQLAlchemy(app)
-#mood_db = SQLAlchemy(app)
+#theme_db = SQLAlchemy(app)
 
 admin = Admin(app)
 
@@ -36,33 +36,33 @@ class ImprovedModel(ModelView):
 	column_display_pk = True
 
 #****************************************************
-# Album-Mood ASSOCIATION TABLE:
+# Album-Theme ASSOCIATION TABLE:
 
-"""class MoodAssociation(db.Model):
-	__tablename__='mood_associations'
+"""class ThemeAssociation(db.Model):
+	__tablename__='theme_associations'
 	album_id = db.Column(db.String(), db.ForeignKey('album.id'))
-	mood_name = db.Column(db.String(), db.ForeignKey('mood.name'), primary_key = True)"""
+	theme_name = db.Column(db.String(), db.ForeignKey('theme.name'), primary_key = True)"""
 
 
 """
-class MoodAssociation(db.Model):
-	__tablename__ = 'mood_associations'
+class ThemeAssociation(db.Model):
+	__tablename__ = 'theme_associations'
 	album_id = db.Column(db.String())
-	mood_name = db.Column(db.String(), primary_key=True)
+	theme_name = db.Column(db.String(), primary_key=True)
 """
 
 
-class MoodAssociation(db.Model):
-	__tablename__ = 'mood_associations'
+class ThemeAssociation(db.Model):
+	__tablename__ = 'theme_associations'
 	album_id = db.Column(db.String(), primary_key=True)
-	mood_name = db.Column(db.String(), primary_key=True)
+	theme_name = db.Column(db.String(), primary_key=True)
 
 
-mood_associations = db.Table('mood_associations',
+theme_associations = db.Table('theme_associations',
 	db.Column('album_id', db.String(), db.ForeignKey('album.id'), primary_key=True),
-	#db.Column('mood_name', db.String(), db.ForeignKey('mood.name'), primary_key=True),
+	#db.Column('theme_name', db.String(), db.ForeignKey('theme.name'), primary_key=True),
 	
-	db.Column('mood_name', db.String(), db.ForeignKey('mood.name'), primary_key=True),
+	db.Column('theme_name', db.String(), db.ForeignKey('theme.name'), primary_key=True),
 	extend_existing=True
 )
 #****************************************************
@@ -75,36 +75,39 @@ class Album(db.Model):
 	date_added = 	db.Column(db.DateTime, default=datetime.utcnow)
 
 	
-	#moods = db.relationship('Mood', secondary=mood_associations, back_populates='participants')
+	#themes = db.relationship('Theme', secondary=theme_associations, back_populates='participants')
 
-	moods = db.relationship('Mood', secondary=mood_associations, backref=(db.backref('participants', lazy = 'dynamic')))
+	themes = db.relationship('Theme', secondary=theme_associations, backref=(db.backref('participants', lazy = 'dynamic')))
 
 	def __repr__(self):
 		return '<Album %r>' % self.id
 
 #****************************************************
 
-class Mood(db.Model):
-	__tablename__ = 'mood'
+class Theme(db.Model):
+	__tablename__ = 'theme'
 	id = db.Column(db.String(), primary_key=True)
 	name = db.Column(db.String())
-	#participants = db.relationship('Album', secondary=mood_associations, back_populates='moods')
+	#participants = db.relationship('Album', secondary=theme_associations, back_populates='themes')
+
 
 #****************************************************
 
 
 #process.updateMoodsDb.update(db, Mood)
+#process.updateThemesDb.update(db, Theme)
+
 
 #db.create_all(
 
 admin.add_view(ImprovedModel(Album, db.session))
-admin.add_view(ImprovedModel(Mood, db.session))
-admin.add_view(ImprovedModel(MoodAssociation, db.session))
+admin.add_view(ImprovedModel(Theme, db.session))
+admin.add_view(ImprovedModel(ThemeAssociation, db.session))
 
-#moodTemp = Mood.query.filter_by(name='Angry').first()
+#themeTemp = Theme.query.filter_by(name='Angry').first()
 #albumTemp = Album.query.filter_by(id='mw0000042674').first()
 
-#moodTemp.participants.append(albumTemp)
+#themeTemp.participants.append(albumTemp)
 #db.session.commit()
 
 
@@ -122,10 +125,10 @@ def index():
 		newAlbumEntry = Album(id=albumInfo['id'], artist=albumInfo['artist'], title=albumInfo['title'])
 
 		
-		for n,i in process.scraper.getMoods(albumInfo['id'], db, Mood):
+		for n,i in process.scraper.getThemes(albumInfo['id'], db, Theme):
 			print(f'\n\n\n{n}\n\n\n')
-			moodTemp = Mood.query.filter_by(name=f'{n}').first()
-			moodTemp.participants.append(newAlbumEntry)
+			themeTemp = Theme.query.filter_by(name=f'{n}').first()
+			themeTemp.participants.append(newAlbumEntry)
 	
 		try:
 			db.session.add(newAlbumEntry)
@@ -136,20 +139,20 @@ def index():
 	else:
 		albumlist = Album.query.order_by(Album.date_added).all()
 
-		#moodDict = {}
-		moodDict = defaultdict(list)
+		#themeDict = {}
+		themeDict = defaultdict(list)
 		
 		for album in albumlist:
-			for association in MoodAssociation.query.filter_by(album_id=album.id).all():
-				moodname = association.mood_name
+			for association in ThemeAssociation.query.filter_by(album_id=album.id).all():
+				themename = association.theme_name
 
-				#if album.title in moodDict:
-				moodDict[album.title].append(moodname)
+				#if album.title in themeDict:
+				themeDict[album.title].append(themename)
 				#else:
-					#moodDict[album.title] = moodname
+					#themeDict[album.title] = themename
 
 
-		return render_template('index.html', albumlist=albumlist, moodDict=moodDict)		
+		return render_template('index.html', albumlist=albumlist, themeDict=themeDict)		
 	
 
 if __name__ == "__main__":

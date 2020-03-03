@@ -15,6 +15,8 @@ import process.updateMoodsDb
 from collections import defaultdict
 
 #****************************************************
+# init config:
+
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///test.db'
 app.config['SECRET_KEY'] = 'alpine'
@@ -24,34 +26,30 @@ db = SQLAlchemy(app)
 admin = Admin(app)
 
 #****************************************************
+# Define a ModelView extension that has visible primary keys, for /admin view.
 
 class FullModel(ModelView):
 	column_display_pk = True
 
 #****************************************************
-# Album-Theme ASSOCIATION TABLE:
+# Define association tables and models for theme-album and mood-album relations.
+# The table allows for db.relationship.secondary
+# The model allows for /admin view
 
 class ThemeAssociation(db.Model):
 	__tablename__ = 'theme_associations'
 	album_id = db.Column(db.String(), primary_key=True)
 	theme_name = db.Column(db.String(), primary_key=True)
-
-
 theme_associations = db.Table('theme_associations',
 	db.Column('album_id', db.String(), db.ForeignKey('album.id'), primary_key=True),	
 	db.Column('theme_name', db.String(), db.ForeignKey('theme.name'), primary_key=True),
 	extend_existing=True
 )
 
-#****************************************************
-# Album-Mood ASSOCIATION TABLE:
-
 class MoodAssociation(db.Model):
 	__tablename__ = 'mood_associations'
 	album_id = db.Column(db.String(), primary_key=True)
 	mood_name = db.Column(db.String(), primary_key=True)
-
-
 mood_associations = db.Table('mood_associations',
 	db.Column('album_id', db.String(), db.ForeignKey('album.id'), primary_key=True),
 	db.Column('mood_name', db.String(), db.ForeignKey('mood.name'), primary_key=True),
@@ -59,6 +57,9 @@ mood_associations = db.Table('mood_associations',
 )
 
 #****************************************************
+# Define Album model.
+# Attributes: id, artist, title, date_added
+# Relationships: themes, moods
 
 class Album(db.Model):
 	__tablename__ = 'album'
@@ -75,6 +76,8 @@ class Album(db.Model):
 		return '<Album %r>' % self.id
 
 #****************************************************
+# Define Theme model. Meant to be accessed by AllMusic id string, ex. 'introspection-ma0000006318'
+# Attributes: id, name
 
 class Theme(db.Model):
 	__tablename__ = 'theme'
@@ -82,15 +85,17 @@ class Theme(db.Model):
 	name = db.Column(db.String())
 
 
+#****************************************************
+# Define Mood model. Meant to be accessed by AllMusic id string, ex. 'detached-xa0000000707'
+# Attributes: id, name
+
 class Mood(db.Model):
 	__tablename__ = 'mood'
 	id = db.Column(db.String(), primary_key=True)
 	name = db.Column(db.String())
 
 #****************************************************
-
-
-#****************************************************
+# create /admin views:
 
 admin.add_view(FullModel(Album, db.session))
 
@@ -119,7 +124,6 @@ def index():
 		albumInfo = process.scraper.getBasicInfo(titleInput, artistInput)
 
 		newAlbumEntry = Album(id=albumInfo['id'], artist=albumInfo['artist'], title=albumInfo['title'])
-
 		
 		for n,i in process.scraper.getThemes(albumInfo['id'], db, Theme):
 			print(f'\n\n\n{n}\n\n\n')
@@ -131,7 +135,6 @@ def index():
 			moodTemp = Mood.query.filter_by(name=f'{n}').first()
 			moodTemp.participants.append(newAlbumEntry)
 		
-
 		try:
 			db.session.add(newAlbumEntry)
 			db.session.commit()

@@ -119,6 +119,6 @@ def getSimilarAlbums(id):
 	for album in similarAlbumSoup.find_all("a"):
 		similarAlbumList.append([album.get('title'), album.get('href')])
 
-	print(similarAlbumList)
+	return similarAlbumList
 
 #***********************************************************************************************************************************

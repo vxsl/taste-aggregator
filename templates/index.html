@@ -7,7 +7,7 @@
 	<form style="height:100px" action="/" method="POST">
 		<input class ="userIn" type="text" name="artist" id="artist" placeholder="Artist name">
 		<input class ="userIn" type="text" name="title" id="title" placeholder="Album title">
-		<input class ="userIn" style="color:white;" type="submit" name="start" value="GET INFO">
+		<input class ="userIn" style="color:red; border-color:red;" type="submit" name="start" value="ADD">
 	</form></h1>	
 
 
@@ -30,29 +30,20 @@
 	    <th>ID</th>
 	    <th>ADDED</th>
 	  </tr>
-	  
 	  	{% for album in albumlist %}
-			<tr>
+			<tr class='album'>
 			    <td class="album-title">
 			    	<a href="https://allmusic.com/album/{{album.id}}"> {{album.artist}} - {{album.title}} </a>
 			    </td>
 			    <td> 	    	
-
 			    	{% for id,theme in themeDict[album.title] %}
-
 			    		<a href="https://allmusic.com/theme/{{id}}">{{theme}}</a>{{ "," if not loop.last }}
-
 			    	{% endfor %}
-
 			    </td>
 			    <td>
 			    	{% for id,mood in moodDict[album.title] %}
-
 			    		<a href="https://allmusic.com/mood/{{id}}">{{mood}}</a>{{ "," if not loop.last }}
-
 			    	{% endfor %}
-
-
 			    </td>
 			    <td></td>
 			    <td>{{album.id}}</td>

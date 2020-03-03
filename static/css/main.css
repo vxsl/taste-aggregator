@@ -20,7 +20,6 @@ h1 {
 .userIn {
 
 	font-size:30px;
-	background-color:rgba(0,0,0,0);
 	border-style:solid;
 	padding:10px;
 }
@@ -30,6 +29,18 @@ body {
 	font-family: Arial, Helvetica, sans-serif;
 	background-color:#E4E4E4;
 	color:blue;
+}
+
+
+.album {
+	color:blue;
+	padding-bottom:300px;
+}
+
+.album > td {
+
+	padding-top:2%;
+	padding-bottom:2%;
 }
 
 .album-title {

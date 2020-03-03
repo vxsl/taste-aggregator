@@ -89,10 +89,6 @@ class Mood(db.Model):
 
 #****************************************************
 
-if database_exists(app.config['SQLALCHEMY_DATABASE_URI']) == False:
-	db.create_all()
-	process.updateMoodsDb.update(db, Mood)
-	process.updateThemesDb.update(db, Theme)
 
 #****************************************************
 
@@ -109,6 +105,12 @@ admin.add_view(FullModel(MoodAssociation, db.session))
 
 @app.route('/', methods=['POST', 'GET'])
 def index():
+
+	if database_exists(app.config['SQLALCHEMY_DATABASE_URI']) == False:
+		db.create_all()
+		process.updateMoodsDb.update(db, Mood)
+		process.updateThemesDb.update(db, Theme)
+
 	if request.method == 'POST':
 
 		artistInput = request.form['artist']

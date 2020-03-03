@@ -14,6 +14,8 @@ import process.updateMoodsDb
 
 from collections import defaultdict
 
+from sqlalchemy.ext.associationproxy import association_proxy
+
 #****************************************************
 # init config:
 
@@ -126,12 +128,10 @@ def index():
 		newAlbumEntry = Album(id=albumInfo['id'], artist=albumInfo['artist'], title=albumInfo['title'])
 		
 		for n,i in process.scraper.getThemes(albumInfo['id'], db, Theme):
-			print(f'\n\n\n{n}\n\n\n')
 			themeTemp = Theme.query.filter_by(name=f'{n}').first()
 			themeTemp.participants.append(newAlbumEntry)
 	
 		for n,i in process.scraper.getMoods(albumInfo['id'], db, Mood):
-			print(f'\n\n\n{n}\n\n\n')
 			moodTemp = Mood.query.filter_by(name=f'{n}').first()
 			moodTemp.participants.append(newAlbumEntry)
 		

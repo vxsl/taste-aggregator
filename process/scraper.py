@@ -6,37 +6,27 @@ from html.parser import HTMLParser
 import requests
 import re
 
-def progressMessage(msg):
-	print(f"\n......... {msg} ..................\n\n")
-
-#artist = input("Artist: ").replace(" ", "+")
-#album = input("Album: ").replace(" ", "+")
-
-#artist = "Boards of Canada"
-#album = "Music Has the right to children"
-
-#artist = input("Artist: ")
-#album = input("Album: ")
-
+#***********************************************************************************************************************************
 def getID(title, artist):
 	searchPage = requests.get("https://www.allmusic.com/search/albums/" + artist.replace(" ", "+") + "+" + title.replace(" ", "+"), headers={'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/38.0.2125.111 Safari/537.36'})
 
 	searchSoup = BeautifulSoup(searchPage.content, "html.parser", parse_only=SoupStrainer("div", class_="title"))
-
-	#albumURL = searchSoup.find('a').get('href')
 
 	tooltip = searchSoup.find('a').get('data-tooltip')
 	id = re.search("[a-z]+\d+", tooltip)
 
 	return id[0]
 
+def getID(url):
+	id = re.search("[a-z]+\d+", url)
+	return id[0]
+
+#***********************************************************************************************************************************
 def getBasicInfo(title, artist):
 	searchPage = requests.get("https://www.allmusic.com/search/albums/" + artist.replace(" ", "+") + "+" + title.replace(" ", "+"), headers={'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/38.0.2125.111 Safari/537.36'})
 
 	idTitleSoup = BeautifulSoup(searchPage.content, "html.parser", parse_only=SoupStrainer("div", class_="title"))
 	artistSoup = BeautifulSoup(searchPage.content, "html.parser", parse_only=SoupStrainer("div", class_="artist"))
-
-	#albumURL = searchSoup.find('a').get('href')
 
 	tooltip = idTitleSoup.find('a').get('data-tooltip')
 	idCandidates = re.search("[a-z]+\d+", tooltip)
@@ -49,16 +39,20 @@ def getBasicInfo(title, artist):
 	result = {'id':idCandidates[0], 'title':titleCandidate, 'artist':artistCandidate}
 	return result
 
+#***********************************************************************************************************************************
 def getURL(id):
 	albumURL = f'https://www.allmusic.com/album/{id}'
 	return albumURL
 
+
+#***********************************************************************************************************************************
 def getPage(url):
 
 	albumPage = requests.get(url, headers={'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/38.0.2125.111 Safari/537.36'})
 	return albumPage
 
-#******************************************d('t*****************************************************************************************
+
+#***********************************************************************************************************************************
 
 def getThemes(id, db, themeModel):
 
@@ -107,7 +101,7 @@ def getMoods(id, db, moodModel):
 
 #***********************************************************************************************************************************
 
-def getSimilarAlbums(id):
+def getSimilarAlbums(id, db, albumModel):
 
 	similarAlbumPage = requests.get(getURL(id) + "/similar", headers={'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/38.0.2125.111 Safari/537.36'})	
 
@@ -117,7 +111,8 @@ def getSimilarAlbums(id):
 	similarAlbumList = []
 
 	for album in similarAlbumSoup.find_all("a"):
-		similarAlbumList.append([album.get('title'), album.get('href')])
+		if albumModel.query.filter_by(id=getID(album.get('href'))).one_or_none() == None:
+			db.session.add(albumModel(id=getID(album.get('href')), title = album.get('title')))
 
 	return similarAlbumList
 

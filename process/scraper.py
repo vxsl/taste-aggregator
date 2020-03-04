@@ -5,21 +5,33 @@ from bs4 import SoupStrainer
 from html.parser import HTMLParser
 import requests
 import re
+
 #***********************************************************************************************************************************
-def getID(title, artist):
-	searchPage = requests.get("https://www.allmusic.com/search/albums/" + artist.replace(" ", "+") + "+" + title.replace(" ", "+"), headers={'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/38.0.2125.111 Safari/537.36'})
 
-	searchSoup = BeautifulSoup(searchPage.content, "html.parser", parse_only=SoupStrainer("div", class_="title"))
+def getID(*args): 
+	# OVERLOADING:
+	# params (title, artist)
+	if args[1]:
+		title = args[0]
+		artist = args[1]
 
-	tooltip = searchSoup.find('a').get('data-tooltip')
-	id = re.search("[a-z]+\d+", tooltip)
+		searchPage = requests.get("https://www.allmusic.com/search/albums/" + artist.replace(" ", "+") + "+" + title.replace(" ", "+"), headers={'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/38.0.2125.111 Safari/537.36'})
 
-	return id[0]
+		searchSoup = BeautifulSoup(searchPage.content, "html.parser", parse_only=SoupStrainer("div", class_="title"))
 
-def getID(url):
-	id = re.search("[a-z]+\d+", url)
-	return id[0]
+		tooltip = searchSoup.find('a').get('data-tooltip')
+		id = re.search("[a-z]+\d+", tooltip)
 
+		return id[0]
+
+	# OVERLOADING:
+	# params (id)
+	elif args[0]:
+		url = args[0]
+		id = re.search("[a-z]+\d+", url)
+		print(f"\n\nHERE:{id}\n\n\n")
+		return id[0]
+		
 #***********************************************************************************************************************************
 def getBasicInfo(title, artist):
 	searchPage = requests.get("https://www.allmusic.com/search/albums/" + artist.replace(" ", "+") + "+" + title.replace(" ", "+"), headers={'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/38.0.2125.111 Safari/537.36'})
@@ -42,7 +54,7 @@ def getBasicInfo(id):
 	albumPageSoup = BeautifulSoup(getPage(getURL(id)).content, "html.parser", parse_only=SoupStrainer("header"))
 	artist = albumPageSoup.find("h2", class_="album-artist").a.text
 	title = albumPageSoup.find("h1", class_="album-title").text.strip()
-	return [artist, title]
+	return artist, title
 
 #***********************************************************************************************************************************
 def getURL(id):

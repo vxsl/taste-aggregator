@@ -59,7 +59,7 @@ mood_associations = db.Table('mood_associations',
 )
 
 #****************************************************
-# Define Album model.
+# Define Album model.	
 # Attributes: id, artist, title, date_added
 # Relationships: themes, moods
 
@@ -86,7 +86,9 @@ class Album(db.Model):
 		return '<Album %r>' % self.id
 
 	def __init__(self, id):
-		result.artist = process.scraper.getBasicInfo(id)[0]
+		#result = 
+		self.id = id
+		self.artist, self.title = process.scraper.getBasicInfo(id)
 
 
 #****************************************************
@@ -137,22 +139,22 @@ def index():
 		artistInput = request.form['artist']
 		titleInput = request.form['title']
 
-		albumInfo = process.scraper.getBasicInfo(titleInput, artistInput)
-
-		newAlbumEntry = Album(id=albumInfo['id'], artist=albumInfo['artist'], title=albumInfo['title'])
-		
-		for n,i in process.scraper.getThemes(albumInfo['id'], db, Theme):
+		newAlbumEntry = Album(process.scraper.getID(titleInput, artistInput))
+		print(newAlbumEntry.id, newAlbumEntry.artist, newAlbumEntry.title)
+		#newAlbumEntry = Album(process.scraper.getID(request.form['artist'], request.form['title']))
+		"""
+		for n,i in process.scraper.getThemes(newAlbumEntry.id, db, Theme):
 			themeTemp = Theme.query.filter_by(name=f'{n}').first()
 			themeTemp.participants.append(newAlbumEntry)
 	
-		for n,i in process.scraper.getMoods(albumInfo['id'], db, Mood):
+		for n,i in process.scraper.getMoods(newAlbumEntry.id, db, Mood):
 			moodTemp = Mood.query.filter_by(name=f'{n}').first()
 			moodTemp.participants.append(newAlbumEntry)
 		
-		for n,i in process.scraper.getSimilarAlbums(albumInfo['id'], db, Album):
+		for n,i in process.scraper.getSimilarAlbums(newAlbumEntry.id, db, Album):
 			print(f"SIMILAR ALBUM:\n\n\n{n}\n\n\n")
 			newAlbumEntry.children.append(Album(id=i, title=n))
-
+		"""
 		try:
 			db.session.add(newAlbumEntry)
 			db.session.commit()

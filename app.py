@@ -22,7 +22,7 @@ from sqlalchemy.ext.associationproxy import association_proxy
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///test.db'
 app.config['SECRET_KEY'] = 'alpine'
-app.config['SQLALCHEMY_ECHO'] = True
+app.config['SQLALCHEMY_ECHO'] = False
 
 db = SQLAlchemy(app)
 admin = Admin(app)
@@ -63,9 +63,14 @@ mood_associations = db.Table('mood_associations',
 # Attributes: id, artist, title, date_added
 # Relationships: themes, moods
 
+class SimilarRelation(db.Model):
+	__tablename__='similar_album_associations'
+	parent_id = db.Column(db.String(), db.ForeignKey('album.id'), primary_key=True)
+	child_id = db.Column(db.String(), db.ForeignKey('album.id'), primary_key=True)
+
 class Album(db.Model):
 	__tablename__ = 'album'
-	id = db.Column(db.String(), primary_key=True)
+	id = db.Column(db.String(),  db.ForeignKey('album.id'), primary_key=True)
 	artist = 		db.Column(db.String())
 	title = 		db.Column(db.String())
 	date_added = 	db.Column(db.DateTime, default=datetime.utcnow)
@@ -74,8 +79,15 @@ class Album(db.Model):
 
 	moods = db.relationship('Mood', secondary=mood_associations, backref=(db.backref('participants', lazy = 'dynamic')))
 
+	children = db.relationship('SimilarRelation', backref='children', primaryjoin=id==SimilarRelation.child_id)
+	parents = db.relationship('SimilarRelation', backref='parents', primaryjoin=id==SimilarRelation.parent_id)
+
 	def __repr__(self):
 		return '<Album %r>' % self.id
+
+	def __init__(self, id):
+		result.artist = process.scraper.getBasicInfo(id)[0]
+
 
 #****************************************************
 # Define Theme model. Meant to be accessed by AllMusic id string, ex. 'introspection-ma0000006318'
@@ -107,6 +119,8 @@ admin.add_view(FullModel(Mood, db.session))
 admin.add_view(FullModel(ThemeAssociation, db.session))
 admin.add_view(FullModel(MoodAssociation, db.session))
 
+admin.add_view(FullModel(SimilarRelation, db.session))
+
 #****************************************************
 # Render HTML: 
 
@@ -135,6 +149,10 @@ def index():
 			moodTemp = Mood.query.filter_by(name=f'{n}').first()
 			moodTemp.participants.append(newAlbumEntry)
 		
+		for n,i in process.scraper.getSimilarAlbums(albumInfo['id'], db, Album):
+			print(f"SIMILAR ALBUM:\n\n\n{n}\n\n\n")
+			newAlbumEntry.children.append(Album(id=i, title=n))
+
 		try:
 			db.session.add(newAlbumEntry)
 			db.session.commit()

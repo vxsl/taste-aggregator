@@ -5,7 +5,6 @@ from bs4 import SoupStrainer
 from html.parser import HTMLParser
 import requests
 import re
-
 #***********************************************************************************************************************************
 def getID(title, artist):
 	searchPage = requests.get("https://www.allmusic.com/search/albums/" + artist.replace(" ", "+") + "+" + title.replace(" ", "+"), headers={'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/38.0.2125.111 Safari/537.36'})
@@ -38,6 +37,12 @@ def getBasicInfo(title, artist):
 
 	result = {'id':idCandidates[0], 'title':titleCandidate, 'artist':artistCandidate}
 	return result
+
+def getBasicInfo(id):
+	albumPageSoup = BeautifulSoup(getPage(getURL(id)).content, "html.parser", parse_only=SoupStrainer("header"))
+	artist = albumPageSoup.find("h2", class_="album-artist").a.text
+	title = albumPageSoup.find("h1", class_="album-title").text.strip()
+	return [artist, title]
 
 #***********************************************************************************************************************************
 def getURL(id):
@@ -103,17 +108,33 @@ def getMoods(id, db, moodModel):
 
 def getSimilarAlbums(id, db, albumModel):
 
-	similarAlbumPage = requests.get(getURL(id) + "/similar", headers={'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/38.0.2125.111 Safari/537.36'})	
 
+	similarAlbumPage = requests.get(getURL(id) + "/similar", headers={'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/38.0.2125.111 Safari/537.36'})	
+	#print(similarAlbumPage.content)
 	similarAlbumSoup = BeautifulSoup(similarAlbumPage.content, "html.parser", parse_only=SoupStrainer("div", class_="album-highlights-container"))
 
 
 	similarAlbumList = []
 
 	for album in similarAlbumSoup.find_all("a"):
-		if albumModel.query.filter_by(id=getID(album.get('href'))).one_or_none() == None:
-			db.session.add(albumModel(id=getID(album.get('href')), title = album.get('title')))
+		
+		print(f"ARTIST: {album.find('div', class_='info').find('div', class_='artist').text}")
 
+		if albumModel.query.filter_by(id=getID(album.get('href'))).one_or_none() == None:
+			#print(album.find("div")).get_text()
+			
+			#print(album.get('data-hasqtip'))
+			
+			info = album.find('div', class_='info')
+
+
+			db.session.add(albumModel(
+				id = getID(album.get('href')),
+				title = info.find('div', class_='title').text,
+				artist = info.find('div', class_='artist').text,
+
+				))
+				#artist = {album.find('div', class_='info').find('div', class_='artist').text}))
 	return similarAlbumList
 
 #***********************************************************************************************************************************

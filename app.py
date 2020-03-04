@@ -22,7 +22,7 @@ from sqlalchemy.ext.associationproxy import association_proxy
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///test.db'
 app.config['SECRET_KEY'] = 'alpine'
-app.config['SQLALCHEMY_ECHO'] = False
+app.config['SQLALCHEMY_ECHO'] = True
 
 db = SQLAlchemy(app)
 admin = Admin(app)
@@ -89,6 +89,8 @@ class Album(db.Model):
 		#result = 
 		self.id = id
 		self.artist, self.title = process.scraper.getBasicInfo(id)
+		associateThemes(self)
+		associateMoods(self)
 
 
 #****************************************************
@@ -124,6 +126,26 @@ admin.add_view(FullModel(MoodAssociation, db.session))
 admin.add_view(FullModel(SimilarRelation, db.session))
 
 #****************************************************
+# misc. functions:
+
+def associateThemes(album):
+
+	for n,i in process.scraper.getThemes(album.id, db, Theme):
+				themeTemp = Theme.query.filter_by(name=f'{n}').first()
+				themeTemp.participants.append(album)
+
+def associateMoods(album):
+	for n,i in process.scraper.getMoods(album.id, db, Mood):
+				moodTemp = Mood.query.filter_by(name=f'{n}').first()
+				moodTemp.participants.append(album)
+			
+def associateSimilar(album):
+	for n,i in process.scraper.getSimilarAlbums(album.id, db, Album):
+			print(f"SIMILAR ALBUM:\n\n\n{n}\n\n\n")
+			#album.children.append(Album(id=i, title=n))
+			db.session.add(SimilarRelation(parent_id=album.id, child_id=i))
+
+#****************************************************
 # Render HTML: 
 
 @app.route('/', methods=['POST', 'GET'])
@@ -136,34 +158,21 @@ def index():
 
 	if request.method == 'POST':
 
-		artistInput = request.form['artist']
-		titleInput = request.form['title']
-
-		newAlbumEntry = Album(process.scraper.getID(titleInput, artistInput))
-		print(newAlbumEntry.id, newAlbumEntry.artist, newAlbumEntry.title)
-		#newAlbumEntry = Album(process.scraper.getID(request.form['artist'], request.form['title']))
-		"""
-		for n,i in process.scraper.getThemes(newAlbumEntry.id, db, Theme):
-			themeTemp = Theme.query.filter_by(name=f'{n}').first()
-			themeTemp.participants.append(newAlbumEntry)
-	
-		for n,i in process.scraper.getMoods(newAlbumEntry.id, db, Mood):
-			moodTemp = Mood.query.filter_by(name=f'{n}').first()
-			moodTemp.participants.append(newAlbumEntry)
+		newAlbumEntry = Album(process.scraper.getIDFromInfo(request.form['artist'], request.form['title']))
 		
-		for n,i in process.scraper.getSimilarAlbums(newAlbumEntry.id, db, Album):
-			print(f"SIMILAR ALBUM:\n\n\n{n}\n\n\n")
-			newAlbumEntry.children.append(Album(id=i, title=n))
-		"""
+		#associateThemes(newAlbumEntry)
+		#associateMoods(newAlbumEntry)
+		associateSimilar(newAlbumEntry)
+
 		try:
 			db.session.add(newAlbumEntry)
 			db.session.commit()
 			return redirect('/')
 		except:
 			return "There was an error adding your album"
+
 	else:
 		albumlist = Album.query.order_by(Album.date_added).all()
-
 		themeDict = defaultdict(list)
 		moodDict = defaultdict(list)
 		

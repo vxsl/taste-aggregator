@@ -32,6 +32,7 @@ admin = Admin(app)
 
 class FullModel(ModelView):
 	column_display_pk = True
+	column_hide_backrefs = False
 
 #****************************************************
 # Define association tables and models for theme-album and mood-album relations.
@@ -79,8 +80,8 @@ class Album(db.Model):
 
 	moods = db.relationship('Mood', secondary=mood_associations, backref=(db.backref('participants', lazy = 'dynamic')))
 
-	children = db.relationship('SimilarRelation', backref='children', primaryjoin=id==SimilarRelation.child_id)
-	parents = db.relationship('SimilarRelation', backref='parents', primaryjoin=id==SimilarRelation.parent_id)
+	children = db.relationship('SimilarRelation', backref=db.backref('parents'), primaryjoin=id==SimilarRelation.child_id)
+	parents = db.relationship('SimilarRelation', backref=db.backref('children'), primaryjoin=id==SimilarRelation.parent_id)
 
 	def __repr__(self):
 		return '<Album %r>' % self.id
@@ -144,6 +145,7 @@ def associateSimilar(album):
 			print(f"SIMILAR ALBUM:\n\n\n{n}\n\n\n")
 			#album.children.append(Album(id=i, title=n))
 			db.session.add(SimilarRelation(parent_id=album.id, child_id=i))
+			db.session.commit()
 
 #****************************************************
 # Render HTML: 

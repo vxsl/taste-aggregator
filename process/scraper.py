@@ -13,8 +13,11 @@ def getIDFromInfo(title, artist):
 	searchPage = requests.get("https://www.allmusic.com/search/albums/" + artist.replace(" ", "+") + "+" + title.replace(" ", "+"), headers={'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/38.0.2125.111 Safari/537.36'})
 
 	searchSoup = BeautifulSoup(searchPage.content, "html.parser", parse_only=SoupStrainer("div", class_="title"))
+	try:
+		tooltip = searchSoup.find('a').get('data-tooltip')
+	except:
+		return None
 
-	tooltip = searchSoup.find('a').get('data-tooltip')
 	id = re.search("[a-z]+\d+", tooltip)
 
 	return id[0]

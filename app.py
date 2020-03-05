@@ -104,9 +104,13 @@ class Album(db.Model):
 	def __init__(self, id):
 		print(f"Album constructor: {id}")
 		self.id = id.lower()
-		self.artist, self.title = process.scraper.getBasicInfo(id)
-		associateThemes(self)
-		associateMoods(self)
+		try:
+			self.artist, self.title = process.scraper.getBasicInfo(id)
+			associateThemes(self)
+			associateMoods(self)
+			associateSimilar(self)
+		except:
+			self = None
 
 
 #****************************************************
@@ -176,11 +180,14 @@ def index():
 
 	if request.method == 'POST':
 
-		newAlbumEntry = Album(process.scraper.getIDFromInfo(request.form['artist'], request.form['title']))
+		try:
+			newAlbumEntry = Album(process.scraper.getIDFromInfo(request.form['artist'], request.form['title']))
+		except:
+			return redirect('/')
 		
 		#associateThemes(newAlbumEntry)
 		#associateMoods(newAlbumEntry)
-		associateSimilar(newAlbumEntry)
+		#associateSimilar(newAlbumEntry)
 
 		try:
 			db.session.add(newAlbumEntry)

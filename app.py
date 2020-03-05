@@ -33,7 +33,7 @@ admin = Admin(app)
 
 #****************************************************
 # for development:
-if (sys.argv[1] == 'reset'):
+if (len(sys.argv) == 2 and sys.argv[1] == 'reset'):
 	if os.path.exists('test.db'):
 		os.remove('test.db')
 
@@ -74,45 +74,36 @@ mood_associations = db.Table('mood_associations',
 # Attributes: id, artist, title, date_added
 # Relationships: themes, moods
 
-"""
-class SimilarRelation(db.Model):
-	__tablename__='similar_album_associations'
-	parent_id = db.Column(db.String(), db.ForeignKey('album.id'), index=True, primary_key=True)
-	child_id = db.Column(db.String(), db.ForeignKey('album.id'))
-	db.UniqueConstraint('parent_id', 'child_id', name='unique_similarRelations')
-"""
-
 similar_album_association = db.Table(
 	'similar_album_associations',
 	db.Column('parent_id', db.String(), db.ForeignKey('album.id'), index=True),
 	db.Column('child_id', db.String(), db.ForeignKey('album.id')),
 	db.UniqueConstraint('parent_id', 'child_id', name='unique_similarRelations')
 	)
+
 class Album(db.Model):
 	__tablename__ = 'album'
 	id = 			db.Column(db.String(), primary_key=True)
 	artist = 		db.Column(db.String())
 	title = 		db.Column(db.String())
 	date_added = 	db.Column(db.DateTime, default=datetime.utcnow)
+	parent = 		db.Column(db.Boolean, default=True)
 	themes = 		db.relationship('Theme', secondary=theme_associations, backref=(db.backref('participants', lazy = 'dynamic')))
 	moods = 		db.relationship('Mood', secondary=mood_associations, backref=(db.backref('participants', lazy = 'dynamic')))
-	"""
-	children = db.relationship('Album',
-							secondary=SimilarRelation,
-							primaryjoin=id==SimilarRelation.parent_id,
-							secondaryjoin=id==SimilarRelation.child_id)
-	"""
 
 	children = db.relationship('Album',
 							secondary=similar_album_association,
 							primaryjoin=id==similar_album_association.c.parent_id,
 							secondaryjoin=id==similar_album_association.c.child_id)
+
+	
+
 	def __repr__(self):
 		return '<Album %r>' % self.id
 
 	def __init__(self, id):
 		print(f"Album constructor: {id}")
-		self.id = id
+		self.id = id.lower()
 		self.artist, self.title = process.scraper.getBasicInfo(id)
 		associateThemes(self)
 		associateMoods(self)
@@ -153,8 +144,6 @@ admin.add_view(FullModel(Mood, db.session))
 
 admin.add_view(FullModel(ThemeAssociation, db.session))
 admin.add_view(FullModel(MoodAssociation, db.session))
-
-#admin.add_view(FullModel(SimilarRelation, db.session))
 
 #****************************************************
 # misc. functions:
@@ -201,9 +190,10 @@ def index():
 			return "There was an error adding your album"
 
 	else:
-		albumlist = Album.query.order_by(Album.date_added).all()
+		albumlist = Album.query.filter_by(parent=True).order_by(Album.date_added).all()
 		themeDict = defaultdict(list)
 		moodDict = defaultdict(list)
+		similarCountDict = {}
 		
 		for album in albumlist:
 			for association in ThemeAssociation.query.filter_by(album_id=album.id).all():
@@ -212,8 +202,9 @@ def index():
 			for association in MoodAssociation.query.filter_by(album_id=album.id).all():
 				moodDataPair = [Mood.query.filter_by(name=association.mood_name).one().id, association.mood_name]
 				moodDict[album.title].append(moodDataPair)
+			similarCountDict[album.id] = len(album.children)
 
-		return render_template('index.html', albumlist=albumlist, themeDict=themeDict, moodDict=moodDict)		
+		return render_template('index.html', albumlist=albumlist, themeDict=themeDict, moodDict=moodDict, similarCountDict=similarCountDict)		
 	
 
 #****************************************************

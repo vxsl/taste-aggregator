@@ -16,16 +16,26 @@ from collections import defaultdict
 
 from sqlalchemy.ext.associationproxy import association_proxy
 
+import sys
+import os
+
+
 #****************************************************
 # init config:
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///test.db'
 app.config['SECRET_KEY'] = 'alpine'
-app.config['SQLALCHEMY_ECHO'] = True
+app.config['SQLALCHEMY_ECHO'] = False
 
 db = SQLAlchemy(app)
 admin = Admin(app)
+
+#****************************************************
+# for development:
+if (sys.argv[1] == 'reset'):
+	if os.path.exists('test.db'):
+		os.remove('test.db')
 
 #****************************************************
 # Define a ModelView extension that has visible primary keys, for /admin view.
@@ -64,30 +74,44 @@ mood_associations = db.Table('mood_associations',
 # Attributes: id, artist, title, date_added
 # Relationships: themes, moods
 
+"""
 class SimilarRelation(db.Model):
 	__tablename__='similar_album_associations'
-	parent_id = db.Column(db.String(), db.ForeignKey('album.id'), primary_key=True)
-	child_id = db.Column(db.String(), db.ForeignKey('album.id'), primary_key=True)
+	parent_id = db.Column(db.String(), db.ForeignKey('album.id'), index=True, primary_key=True)
+	child_id = db.Column(db.String(), db.ForeignKey('album.id'))
+	db.UniqueConstraint('parent_id', 'child_id', name='unique_similarRelations')
+"""
 
+similar_album_association = db.Table(
+	'similar_album_associations',
+	db.Column('parent_id', db.String(), db.ForeignKey('album.id'), index=True),
+	db.Column('child_id', db.String(), db.ForeignKey('album.id')),
+	db.UniqueConstraint('parent_id', 'child_id', name='unique_similarRelations')
+	)
 class Album(db.Model):
 	__tablename__ = 'album'
-	id = db.Column(db.String(),  db.ForeignKey('album.id'), primary_key=True)
+	id = 			db.Column(db.String(), primary_key=True)
 	artist = 		db.Column(db.String())
 	title = 		db.Column(db.String())
 	date_added = 	db.Column(db.DateTime, default=datetime.utcnow)
+	themes = 		db.relationship('Theme', secondary=theme_associations, backref=(db.backref('participants', lazy = 'dynamic')))
+	moods = 		db.relationship('Mood', secondary=mood_associations, backref=(db.backref('participants', lazy = 'dynamic')))
+	"""
+	children = db.relationship('Album',
+							secondary=SimilarRelation,
+							primaryjoin=id==SimilarRelation.parent_id,
+							secondaryjoin=id==SimilarRelation.child_id)
+	"""
 
-	themes = db.relationship('Theme', secondary=theme_associations, backref=(db.backref('participants', lazy = 'dynamic')))
-
-	moods = db.relationship('Mood', secondary=mood_associations, backref=(db.backref('participants', lazy = 'dynamic')))
-
-	children = db.relationship('SimilarRelation', backref=db.backref('parents'), primaryjoin=id==SimilarRelation.child_id)
-	parents = db.relationship('SimilarRelation', backref=db.backref('children'), primaryjoin=id==SimilarRelation.parent_id)
-
+	children = db.relationship('Album',
+							secondary=similar_album_association,
+							primaryjoin=id==similar_album_association.c.parent_id,
+							secondaryjoin=id==similar_album_association.c.child_id)
 	def __repr__(self):
 		return '<Album %r>' % self.id
 
 	def __init__(self, id):
-		#result = 
+		print(f"Album constructor: {id}")
 		self.id = id
 		self.artist, self.title = process.scraper.getBasicInfo(id)
 		associateThemes(self)
@@ -116,6 +140,12 @@ class Mood(db.Model):
 #****************************************************
 # create /admin views:
 
+if database_exists(app.config['SQLALCHEMY_DATABASE_URI']) == False:
+		
+		db.create_all()
+		process.updateMoodsDb.update(db, Mood)
+		process.updateThemesDb.update(db, Theme)
+
 admin.add_view(FullModel(Album, db.session))
 
 admin.add_view(FullModel(Theme, db.session))
@@ -124,7 +154,7 @@ admin.add_view(FullModel(Mood, db.session))
 admin.add_view(FullModel(ThemeAssociation, db.session))
 admin.add_view(FullModel(MoodAssociation, db.session))
 
-admin.add_view(FullModel(SimilarRelation, db.session))
+#admin.add_view(FullModel(SimilarRelation, db.session))
 
 #****************************************************
 # misc. functions:
@@ -141,22 +171,19 @@ def associateMoods(album):
 				moodTemp.participants.append(album)
 			
 def associateSimilar(album):
-	for n,i in process.scraper.getSimilarAlbums(album.id, db, Album):
-			print(f"SIMILAR ALBUM:\n\n\n{n}\n\n\n")
-			#album.children.append(Album(id=i, title=n))
-			db.session.add(SimilarRelation(parent_id=album.id, child_id=i))
-			db.session.commit()
+	for newAlbum in process.scraper.getSimilarAlbums(album.id, db, Album):
+			print(f"SIMILAR ALBUM:{newAlbum}")
+			album.children.append(newAlbum)
+			#newAlbum.parents.append(album)
+
+
+	db.session.commit()
 
 #****************************************************
 # Render HTML: 
 
 @app.route('/', methods=['POST', 'GET'])
 def index():
-
-	if database_exists(app.config['SQLALCHEMY_DATABASE_URI']) == False:
-		db.create_all()
-		process.updateMoodsDb.update(db, Mood)
-		process.updateThemesDb.update(db, Theme)
 
 	if request.method == 'POST':
 

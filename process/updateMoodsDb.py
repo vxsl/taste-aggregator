@@ -294,4 +294,5 @@ list = {
 def update(dbRef, moodClass):
 	for name,id in list.items():
 		dbRef.session.add(moodClass(id=id, name=name))
-		dbRef.session.commit()
+	
+	dbRef.session.commit()

@@ -186,4 +186,5 @@ list = {
 def update(dbRef, themeClass):
 	for name,id in list.items():
 		dbRef.session.add(themeClass(id=id, name=name))
-		dbRef.session.commit()
+	
+	dbRef.session.commit()

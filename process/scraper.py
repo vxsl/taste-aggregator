@@ -25,7 +25,6 @@ def getIDFromURL(url):
 	# params (title, artist)
 	
 	id = re.search("[a-z]+\d+", url)
-	print(f"\n\nHERE:{id}\n\n\n")
 	return id[0]
 	
 """
@@ -146,21 +145,21 @@ def getSimilarAlbums(id, db, albumModel):
 
 	similarAlbumList = []
 
-	print(similarAlbumSoup)
+	#print(similarAlbumSoup)
 
 	for album in similarAlbumSoup.find_all("a"):
 		
-		print(f"ARTIST: {album.find('div', class_='info').find('div', class_='artist').text}")
-		print("HREF: __________: " + album.get('href'))
+		#print(f"ARTIST: {album.find('div', class_='info').find('div', class_='artist').text}")
+		#print("HREF: __________: " + album.get('href'))
 
 		if albumModel.query.filter_by(id=getIDFromURL(album.get('href'))).one_or_none() == None:
 			#print(album.find("div")).get_text()
 			
 			#print(album.get('data-hasqtip'))
 			
-			info = album.find('div', class_='info')
-
-			db.session.add(albumModel(getIDFromURL(album.get('href'))))
+			#info = album.find('div', class_='info')
+			similarAlbumList.append(albumModel(getIDFromURL(album.get('href'))))
+			#db.session.add(albumModel(getIDFromURL(album.get('href'))))
 			"""
 			db.session.add(albumModel(
 				id = getIDFromURL(album.get('href')),
@@ -170,7 +169,7 @@ def getSimilarAlbums(id, db, albumModel):
 				))
 			print(f"\n\n\nADDING ALBUM: {album.id, album.title, album.artist}")
 			"""
-			db.session.commit()
+			#db.session.commit()
 				#artist = {album.find('div', class_='info').find('div', class_='artist').text}))
 	return similarAlbumList
 

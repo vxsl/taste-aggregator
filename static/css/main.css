@@ -46,6 +46,9 @@ body {
 .album-title {
 
 	font-weight:bold!important;
+	width:25%;
+	font-size:20px;
+	padding-right:2%;
 }
 
 .album-info {

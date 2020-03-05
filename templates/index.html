@@ -2,7 +2,7 @@
 
 
 {% block head %}
-<h1>Music Helpr
+<h1>Helpr
 
 	<form style="height:100px" action="/" method="POST">
 		<input class ="userIn" type="text" name="artist" id="artist" placeholder="Artist name">
@@ -14,12 +14,11 @@
 
 {% endblock %}
 
-
-
-
 {% block body %}
 
 <div class="content">
+
+
 
 	<table class="album-info">
 	  <tr style='background-color:#26221e; color:white'>
@@ -27,30 +26,25 @@
 	    <th>THEMES</th>
 	    <th>MOODS</th>
 	    <th>SIMILAR</th`>
-	    <th>ID</th>
-	    <th>ADDED</th>
 	  </tr>
 	  	{% for album in albumlist %}
 			<tr class='album'>
 			    <td class="album-title">
 			    	<a href="https://allmusic.com/album/{{album.id}}"> {{album.artist}} - {{album.title}} </a>
 			    </td>
-			    <td> 	    	
+			    <td style='width:20%'> 	    	
 			    	{% for id,theme in themeDict[album.title] %}
 			    		<a href="https://allmusic.com/theme/{{id}}">{{theme}}</a>{{ "," if not loop.last }}
 			    	{% endfor %}
 			    </td>
-			    <td>
+			    <td style='width:20%'>
 			    	{% for id,mood in moodDict[album.title] %}
 			    		<a href="https://allmusic.com/mood/{{id}}">{{mood}}</a>{{ "," if not loop.last }}
 			    	{% endfor %}
 			    </td>
-			    <td></td>
-			    <td>{{album.id}}</td>
-			    <td>{{album.date_added.date()}}</td>
-			    <td><form action="/" method="POST">
-			    	<input type="submit" name="{{album.id}}" value="Delete">
-			    </form></td>
+			    <td style='width:10%'>
+			    	<a href="">{{similarCountDict[album.id]}} similar albums</a>
+			    </td>
 			</tr>
 	    {% endfor %}
 	</table>

@@ -173,6 +173,10 @@ def associateSimilar(album):
 
 @app.route('/', methods=['POST', 'GET'])
 def index():
+	
+	if request.args.get('reset') == 1:
+		if os.path.exists('test.db'):
+			os.remove('test.db')
 
 	if request.method == 'POST':
 

@@ -17,13 +17,15 @@ from collections import defaultdict
 import sqlalchemy
 from sqlalchemy.ext.associationproxy import association_proxy
 
-from sqlalchemy.orm import sessionmaker
 from sqlalchemy import create_engine
 
-from sqlalchemy.engine.url import URL
+import psycopg2
+
 
 import sys
 import os
+
+
 
 
 #****************************************************
@@ -38,6 +40,31 @@ app.config['SQLALCHEMY_ECHO'] = False
 
 #db = SQLAlchemy(app)
 
+
+
+#****************************************************
+# for development:
+if (len(sys.argv) == 2 and sys.argv[1] == 'local'):
+	db = sqlalchemy.create_engine('postgresql+psycopg2://postgres:alpine@/?host=/cloudsql/helpr2:us-central1:helpr2db')
+
+print("HERE")
+
+
+with db.connect() as conn:
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS votes "
+        "( vote_id SERIAL NOT NULL, time_cast timestamp NOT NULL, "
+        "candidate VARCHAR(6) NOT NULL, PRIMARY KEY (vote_id) );"
+    )
+    print("Herey here")
+
+@app.route('/', methods=['POST', 'GET'])
+def index():
+	return "I am here"
+print('dogs')
+
+"""
+#****************************************************
 # The SQLAlchemy engine will help manage interactions, including automatically
 # managing a pool of connections to your database
 db = sqlalchemy.create_engine(
@@ -91,12 +118,6 @@ db = sqlalchemy.create_engine(
 admin = Admin(app)
 
 #****************************************************
-# for development:
-if (len(sys.argv) == 2 and sys.argv[1] == 'reset'):
-	if os.path.exists('test.db'):
-		os.remove('test.db')
-
-#****************************************************
 # Define a ModelView extension that has visible primary keys, for /admin view.
 
 class FullModel(ModelView):
@@ -108,7 +129,7 @@ class FullModel(ModelView):
 # The table allows for db.relationship.secondary
 # The model allows for /admin view
 
-class ThemeAssociation(db.Session.Model):
+class ThemeAssociation(db.Model):
 	__tablename__ = 'theme_associations'
 	album_id = db.Column(db.String(), primary_key=True)
 	theme_name = db.Column(db.String(), primary_key=True)
@@ -275,3 +296,4 @@ if __name__ == "__main__":
 	app.run(debug=True)
 
  
+"""

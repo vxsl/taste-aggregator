@@ -291,8 +291,8 @@ list = {
 "Yearning":"yearning-xa0000000733",
 }
 
-def update(dbRef, moodClass):
+def update(session, moodClass):
 	for name,id in list.items():
-		dbRef.session.add(moodClass(id=id, name=name))
+		session.add(moodClass(id=id, name=name))
 	
-	dbRef.session.commit()
+	session.commit()

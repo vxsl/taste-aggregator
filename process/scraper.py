@@ -87,7 +87,7 @@ def getPage(url):
 
 #***********************************************************************************************************************************
 
-def getThemes(id, db, themeModel):
+def getThemes(id, session, themeModel):
 
 	albumSidebarSoup = BeautifulSoup(getPage(getURL(id)).content, "html.parser", parse_only=SoupStrainer("div", class_="sidebar"))
 
@@ -100,9 +100,9 @@ def getThemes(id, db, themeModel):
 		themeIdCandidate = r[0]
 
 		# if the theme doesn't already exist in the Theme model in db, add it and commit.
-		if themeModel.query.filter_by(name=themeNameCandidate).one_or_none() == None:
-			db.session.add(themeModel(id=themeIdCandidate, name=themeNameCandidate))
-			db.session.commit()
+		if session.query(themeModel).filter_by(name=themeNameCandidate).one_or_none() == None:
+			session.add(themeModel(id=themeIdCandidate, name=themeNameCandidate))
+			session.commit()
 
 		themeList.append([themeNameCandidate, themeIdCandidate])
 
@@ -110,7 +110,7 @@ def getThemes(id, db, themeModel):
 
 #***********************************************************************************************************************************
 
-def getMoods(id, db, moodModel):
+def getMoods(id, session, moodModel):
 
 	albumSidebarSoup = BeautifulSoup(getPage(getURL(id)).content, "html.parser", parse_only=SoupStrainer("div", class_="sidebar"))
 
@@ -123,9 +123,9 @@ def getMoods(id, db, moodModel):
 		moodIdCandidate = r[0]
 
 		# if the mood doesn't already exist in the Theme model in db, add it and commit.
-		if moodModel.query.filter_by(name=moodNameCandidate).one_or_none() == None:
-			db.session.add(moodModel(id=moodIdCandidate, name=moodNameCandidate))
-			db.session.commit()
+		if session.query(moodModel).filter_by(name=moodNameCandidate).one_or_none() == None:
+			session.add(moodModel(id=moodIdCandidate, name=moodNameCandidate))
+			session.commit()
 
 		moodList.append([moodNameCandidate, moodIdCandidate])
 
@@ -133,7 +133,7 @@ def getMoods(id, db, moodModel):
 
 
 #***********************************************************************************************************************************
-def getSimilarAlbums(id, db, albumModel):
+def getSimilarAlbums(id, session, albumModel):
 
 	print(f"Getting similar albums from {getURL(id)}:")
 	similarAlbumPage = requests.get(getURL(id) + "/similar", headers={'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/38.0.2125.111 Safari/537.36'})
@@ -146,7 +146,7 @@ def getSimilarAlbums(id, db, albumModel):
 		
 		r = re.search("(([A-Z|a-z]+)+)[A-Z|a-z]+\d+", album.get('data-tooltip'))
 		print(f"SIMILAR ALBUM: {r[0]}")
-		if albumModel.query.filter_by(id=r[0].lower()).one_or_none() == None:
+		if session.query(albumModel).filter_by(id=r[0].lower()).one_or_none() == None:
 			
 			temp = albumModel(r[0])
 			temp.parent = False

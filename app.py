@@ -15,7 +15,11 @@ import process.updateMoodsDb
 from collections import defaultdict
 
 import sqlalchemy
+from sqlalchemy import Table, Column, Integer, String, Boolean, ForeignKey, UniqueConstraint, DateTime, MetaData
+from sqlalchemy.orm import relationship, backref, sessionmaker 
 from sqlalchemy.ext.associationproxy import association_proxy
+from sqlalchemy.ext.declarative import declarative_base
+
 
 from sqlalchemy import create_engine
 
@@ -38,6 +42,10 @@ app.config['SECRET_KEY'] = 'alpine'
 app.config['SQLALCHEMY_ECHO'] = False
 """
 
+app.config['SQLALCHEMY_ECHO'] = True
+app.config['SECRET_KEY'] = 'alpine'
+
+
 #db = SQLAlchemy(app)
 
 
@@ -45,75 +53,29 @@ app.config['SQLALCHEMY_ECHO'] = False
 #****************************************************
 # for development:
 if (len(sys.argv) == 2 and sys.argv[1] == 'local'):
-	db = sqlalchemy.create_engine('postgresql+psycopg2://postgres:alpine@/?host=/cloudsql/helpr2:us-central1:helpr2db')
+	#db = sqlalchemy.create_engine('postgresql+psycopg2://postgres:alpine@/?host=/cloudsql/helpr2:us-central1:helpr2db')
+	db = sqlalchemy.create_engine('postgresql+psycopg2://postgres:alpine@127.0.0.1:5432/test1', echo=True)
 
-print("HERE")
-
-
-with db.connect() as conn:
-    conn.execute(
-        "CREATE TABLE IF NOT EXISTS votes "
-        "( vote_id SERIAL NOT NULL, time_cast timestamp NOT NULL, "
-        "candidate VARCHAR(6) NOT NULL, PRIMARY KEY (vote_id) );"
-    )
-    print("Herey here")
-
-@app.route('/', methods=['POST', 'GET'])
-def index():
-	return "I am here"
-print('dogs')
+conn = db.connect()
+Base = declarative_base()
+meta = MetaData(bind=db)
+DBSession = sessionmaker(bind=db)
+session = DBSession()
 
 """
-#****************************************************
-# The SQLAlchemy engine will help manage interactions, including automatically
-# managing a pool of connections to your database
-db = sqlalchemy.create_engine(
-    # Equivalent URL:
-    # postgres+pg8000://<db_user>:<db_pass>@/<db_name>?unix_sock=/cloudsql/<cloud_sql_instance_name>/.s.PGSQL.5432
-   sqlalchemy.engine.url.URL(
-        drivername='postgres+pg8000',
-        username=os.getenv('DB_USER'),
-        password=os.getenv('DB_PASS'),
-        database=os.getenv('DB_NAME'),
-        query={
-            'unix_sock': '/cloudsql/{}/.s.PGSQL.5432'.format(
-                os.getenv('CLOUD_SQL_CONNECTION_NAME'))
-        }
-    ),
-     # ... Specify additional properties here.
-    # [START_EXCLUDE]
+class ThemeAssociation(Base):
+	__tablename__ = 'theme_associations'
+	album_id = Column(String(), primary_key=True)
+	theme_name = Column(String(), primary_key=True)
 
-    # [START cloud_sql_postgres_sqlalchemy_limit]
-    # Pool size is the maximum number of permanent connections to keep.
-    pool_size=5,
-    # Temporarily exceeds the set pool_size if no connections are available.
-    max_overflow=2,
-    # The total number of concurrent connections for your application will be
-    # a total of pool_size and max_overflow.
-    # [END cloud_sql_postgres_sqlalchemy_limit]
-
-    # [START cloud_sql_postgres_sqlalchemy_backoff]
-    # SQLAlchemy automatically uses delays between failed connection attempts,
-    # but provides no arguments for configuration.
-    # [END cloud_sql_postgres_sqlalchemy_backoff]
-
-    # [START cloud_sql_postgres_sqlalchemy_timeout]
-    # 'pool_timeout' is the maximum number of seconds to wait when retrieving a
-    # new connection from the pool. After the specified amount of time, an
-    # exception will be thrown.
-    pool_timeout=30,  # 30 seconds
-    # [END cloud_sql_postgres_sqlalchemy_timeout]
-
-    # [START cloud_sql_postgres_sqlalchemy_lifetime]
-    # 'pool_recycle' is the maximum number of seconds a connection can persist.
-    # Connections that live longer than the specified amount of time will be
-    # reestablished
-    pool_recycle=1800,  # 30 minutes
-    # [END cloud_sql_postgres_sqlalchemy_lifetime]
-
-    # [END_EXCLUDE]
+theme_associations = Table('theme_associations', Base.metadata, Column('album_id', String(), ForeignKey('album.id'), primary_key=True),
+	Column('theme_name', String(), ForeignKey('theme.name'), primary_key=True),
+	extend_existing=True
 )
-# [END cloud_sql_postgres_sqlalchemy_create]
+class Album(Base):
+	__tablename__ = 'album'
+	id = Column(Integer)
+"""
 
 admin = Admin(app)
 
@@ -129,23 +91,26 @@ class FullModel(ModelView):
 # The table allows for db.relationship.secondary
 # The model allows for /admin view
 
-class ThemeAssociation(db.Model):
+class ThemeAssociation(Base):
 	__tablename__ = 'theme_associations'
-	album_id = db.Column(db.String(), primary_key=True)
-	theme_name = db.Column(db.String(), primary_key=True)
-theme_associations = db.Table('theme_associations',
-	db.Column('album_id', db.String(), db.ForeignKey('album.id'), primary_key=True),	
-	db.Column('theme_name', db.String(), db.ForeignKey('theme.name'), primary_key=True),
+	album_id = Column(String(), primary_key=True)
+	theme_name = Column(String(), primary_key=True)
+
+theme_associations = Table('theme_associations', Base.metadata,
+	Column('album_id', String(), ForeignKey('album.id'), primary_key=True),	
+	Column('theme_name', String(), ForeignKey('theme.name'), primary_key=True),
 	extend_existing=True
 )
 
-class MoodAssociation(db.Model):
+
+class MoodAssociation(Base):
 	__tablename__ = 'mood_associations'
-	album_id = db.Column(db.String(), primary_key=True)
-	mood_name = db.Column(db.String(), primary_key=True)
-mood_associations = db.Table('mood_associations',
-	db.Column('album_id', db.String(), db.ForeignKey('album.id'), primary_key=True),
-	db.Column('mood_name', db.String(), db.ForeignKey('mood.name'), primary_key=True),
+	album_id = Column(String(), primary_key=True)
+	mood_name = Column(String(), primary_key=True)
+
+mood_associations = Table('mood_associations', Base.metadata,
+	Column('album_id', String(), ForeignKey('album.id'), primary_key=True),
+	Column('mood_name', String(), ForeignKey('mood.name'), primary_key=True),
 	extend_existing=True
 )
 
@@ -154,24 +119,24 @@ mood_associations = db.Table('mood_associations',
 # Attributes: id, artist, title, date_added
 # Relationships: themes, moods
 
-similar_album_association = db.Table(
-	'similar_album_associations',
-	db.Column('parent_id', db.String(), db.ForeignKey('album.id'), index=True),
-	db.Column('child_id', db.String(), db.ForeignKey('album.id')),
-	db.UniqueConstraint('parent_id', 'child_id', name='unique_similarRelations')
+similar_album_association = Table(
+	'similar_album_associations', Base.metadata,
+	Column('parent_id', String(), ForeignKey('album.id'), index=True),
+	Column('child_id', String(), ForeignKey('album.id')),
+	UniqueConstraint('parent_id', 'child_id', name='unique_similarRelations')
 	)
 
-class Album(db.Model):
+class Album(Base):
 	__tablename__ = 'album'
-	id = 			db.Column(db.String(), primary_key=True)
-	artist = 		db.Column(db.String())
-	title = 		db.Column(db.String())
-	date_added = 	db.Column(db.DateTime, default=datetime.utcnow)
-	parent = 		db.Column(db.Boolean, default=True)
-	themes = 		db.relationship('Theme', secondary=theme_associations, backref=(db.backref('participants', lazy = 'dynamic')))
-	moods = 		db.relationship('Mood', secondary=mood_associations, backref=(db.backref('participants', lazy = 'dynamic')))
+	id = 			Column(String(), primary_key=True)
+	artist = 		Column(String())
+	title = 		Column(String())
+	date_added = 	Column(DateTime, default=datetime.utcnow)
+	parent = 		Column(Boolean, default=True)
+	themes = 		relationship('Theme', secondary=theme_associations, backref=(backref('participants', lazy = 'dynamic')))
+	moods = 		relationship('Mood', secondary=mood_associations, backref=(backref('participants', lazy = 'dynamic')))
 
-	children = db.relationship('Album',
+	children = relationship('Album',
 							secondary=similar_album_association,
 							primaryjoin=id==similar_album_association.c.parent_id,
 							secondaryjoin=id==similar_album_association.c.child_id)
@@ -193,60 +158,69 @@ class Album(db.Model):
 # Define Theme model. Meant to be accessed by AllMusic id string, ex. 'introspection-ma0000006318'
 # Attributes: id, name
 
-class Theme(db.Model):
+class Theme(Base):
 	__tablename__ = 'theme'
-	id = db.Column(db.String(), primary_key=True)
-	name = db.Column(db.String())
+	id = Column(String(), primary_key=True)
+	name = Column(String())
 
 
 #****************************************************
 # Define Mood model. Meant to be accessed by AllMusic id string, ex. 'detached-xa0000000707'
 # Attributes: id, name
 
-class Mood(db.Model):
+class Mood(Base):
 	__tablename__ = 'mood'
-	id = db.Column(db.String(), primary_key=True)
-	name = db.Column(db.String())
-
+	id = Column(String(), primary_key=True)
+	name = Column(String())
+#meta.create_all()
 #****************************************************
 # create /admin views:
 
-if database_exists(app.config['SQLALCHEMY_DATABASE_URI']) == False:
+"""if database_exists(app.config['SQLALCHEMY_DATABASE_URI']) == False:
 		
-		db.create_all()
+		create_all()
 		process.updateMoodsDb.update(db, Mood)
-		process.updateThemesDb.update(db, Theme)
+		process.updateThemesDb.update(db, Theme)"""
 
-admin.add_view(FullModel(Album, db.session))
+#session.add(Mood(id='wry-xa0000001144', name='Wry Test'))
+#process.updateMoodsDb.update(session, Mood)
+#process.updateThemesDb.update(session, Theme)
 
-admin.add_view(FullModel(Theme, db.session))
-admin.add_view(FullModel(Mood, db.session))
+print("\n\n\n\n\n=======================================\n\n\n\n\n\n")
+Base.metadata.create_all(bind=db)
+session.commit()
+print("\n\n\n\n\n=======================================\n\n\n\n\n\n")
 
-admin.add_view(FullModel(ThemeAssociation, db.session))
-admin.add_view(FullModel(MoodAssociation, db.session))
+admin.add_view(FullModel(Album, session))
+
+admin.add_view(FullModel(Theme, session))
+admin.add_view(FullModel(Mood, session))
+
+admin.add_view(FullModel(ThemeAssociation, session))
+admin.add_view(FullModel(MoodAssociation, session))
 
 #****************************************************
 # misc. functions:
 
 def associateThemes(album):
 
-	for n,i in process.scraper.getThemes(album.id, db, Theme):
-				themeTemp = Theme.query.filter_by(name=f'{n}').first()
+	for n,i in process.scraper.getThemes(album.id, session, Theme):
+				themeTemp = session.query(Theme).filter_by(name=f'{n}').first()
 				themeTemp.participants.append(album)
 
 def associateMoods(album):
-	for n,i in process.scraper.getMoods(album.id, db, Mood):
-				moodTemp = Mood.query.filter_by(name=f'{n}').first()
+	for n,i in process.scraper.getMoods(album.id, session, Mood):
+				moodTemp = session.query(Mood).filter_by(name=f'{n}').first()
 				moodTemp.participants.append(album)
 			
 def associateSimilar(album):
-	for newAlbum in process.scraper.getSimilarAlbums(album.id, db, Album):
+	for newAlbum in process.scraper.getSimilarAlbums(album.id, session, Album):
 			print(f"SIMILAR ALBUM:{newAlbum}")
 			album.children.append(newAlbum)
 			#newAlbum.parents.append(album)
 
 
-	db.session.commit()
+	session.commit()
 
 #****************************************************
 # Render HTML: 
@@ -267,24 +241,24 @@ def index():
 		associateSimilar(newAlbumEntry)
 
 		try:
-			db.session.add(newAlbumEntry)
-			db.session.commit()
+			session.add(newAlbumEntry)
+			session.commit()
 			return redirect('/')
 		except:
 			return "There was an error adding your album"
 
 	else:
-		albumlist = Album.query.filter_by(parent=True).order_by(Album.date_added).all()
+		albumlist = session.query(Album).filter_by(parent=True).order_by(Album.date_added).all()
 		themeDict = defaultdict(list)
 		moodDict = defaultdict(list)
 		similarCountDict = {}
 		
 		for album in albumlist:
-			for association in ThemeAssociation.query.filter_by(album_id=album.id).all():
-				themeDataPair = [Theme.query.filter_by(name=association.theme_name).one().id, association.theme_name]
+			for association in session.query(ThemeAssociation).filter_by(album_id=album.id).all():
+				themeDataPair = [session.query(Theme).filter_by(name=association.theme_name).one().id, association.theme_name]
 				themeDict[album.title].append(themeDataPair)
-			for association in MoodAssociation.query.filter_by(album_id=album.id).all():
-				moodDataPair = [Mood.query.filter_by(name=association.mood_name).one().id, association.mood_name]
+			for association in session.query(MoodAssociation).filter_by(album_id=album.id).all():
+				moodDataPair =[ session.query(Mood).filter_by(name=association.mood_name).one().id, association.mood_name]
 				moodDict[album.title].append(moodDataPair)
 			similarCountDict[album.id] = len(album.children)
 
@@ -294,6 +268,3 @@ def index():
 #****************************************************
 if __name__ == "__main__":
 	app.run(debug=True)
-
- 
-"""

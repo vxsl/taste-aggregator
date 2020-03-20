@@ -183,8 +183,8 @@ list = {
 "Zeitgeist":"zeitgeist-ma0000005124"
 }
 
-def update(dbRef, themeClass):
+def update(session, themeClass):
 	for name,id in list.items():
-		dbRef.session.add(themeClass(id=id, name=name))
+		session.add(themeClass(id=id, name=name))
 	
-	dbRef.session.commit()
+	session.commit()

@@ -8,8 +8,12 @@ from flask_admin.contrib.sqla import ModelView
 
 from datetime import datetime
 
+
+import sys
+import os
+
 import process.scraper
-import process.updateThemesDb
+import process.updateThemesDb	
 import process.updateMoodsDb
 
 from collections import defaultdict
@@ -22,14 +26,15 @@ from sqlalchemy.ext.declarative import declarative_base
 
 
 from sqlalchemy import create_engine
+from sqlalchemy.orm import validates
 
-import psycopg2
-
-
-import sys
-import os
+#import psycopg2
 
 
+
+import pymysql
+
+print("BEGINNING...")
 
 
 #****************************************************
@@ -45,31 +50,46 @@ app.config['SQLALCHEMY_ECHO'] = False
 app.config['SQLALCHEMY_ECHO'] = True
 app.config['SECRET_KEY'] = 'alpine'
 
-
+ 
 #db = SQLAlchemy(app)
+#
+hostname = '10.200.114.4'
+username = 'voxsol_helpr4'
+password = 'kGr1m$ruDM@nZ'
+database = 'voxsol_helpr4'
 
 
-
+"""
 #****************************************************
 # for development:
 if (len(sys.argv) == 2 and sys.argv[1] == 'local'):
 	#db = sqlalchemy.create_engine('postgresql+psycopg2://postgres:alpine@/?host=/cloudsql/helpr2:us-central1:helpr2db')
 	db = sqlalchemy.create_engine('postgresql+psycopg2://postgres:alpine@127.0.0.1:5432/test1', echo=True)
 
+db = sqlalchemy.create_engine('mysql+mysqldb://voxsol_helpr3:kGr1m$ruDM@nZ@10.200.114.4', echo=True)
+
 conn = db.connect()
 Base = declarative_base()
 meta = MetaData(bind=db)
 DBSession = sessionmaker(bind=db)
 session = DBSession()
+"""
 
+
+#
+db = create_engine(f'mysql+pymysql://{username}:{password}@{hostname}:3306/{database}').connect()
+Base = declarative_base()
+meta = MetaData(bind=db)
+DBSession = sessionmaker(bind=db)
+session = DBSession()
 """
 class ThemeAssociation(Base):
 	__tablename__ = 'theme_associations'
-	album_id = Column(String(), primary_key=True)
-	theme_name = Column(String(), primary_key=True)
+	album_id = Column(String(50), primary_key=True)
+	theme_name = Column(String(50), primary_key=True)
 
-theme_associations = Table('theme_associations', Base.metadata, Column('album_id', String(), ForeignKey('album.id'), primary_key=True),
-	Column('theme_name', String(), ForeignKey('theme.name'), primary_key=True),
+theme_associations = Table('theme_associations', Base.metadata, Column('album_id', (String(50), ForeignKey('album.id'), primary_key=True),
+	Column('theme_name', String(50), ForeignKey('theme.name'), primary_key=True),
 	extend_existing=True
 )
 class Album(Base):
@@ -87,30 +107,55 @@ class FullModel(ModelView):
 	column_hide_backrefs = False
 
 #****************************************************
+# Define Theme model. Meant to be accessed by AllMusic id string, ex. 'introspection-ma0000006318'
+# Attributes: id, name
+
+class Theme(Base):
+	__tablename__ = 'theme'
+	id = Column(String(50), primary_key=True)
+	name = Column(String(50))
+
+
+#****************************************************
+# Define Mood model. Meant to be accessed by AllMusic id string, ex. 'detached-xa0000000707'
+# Attributes: id, name
+
+class Mood(Base):
+	__tablename__ = 'mood'
+	id = Column(String(50), primary_key=True)
+	name = Column(String(50))
+#meta.create_all()
+
+#****************************************************
 # Define association tables and models for theme-album and mood-album relations.
 # The table allows for db.relationship.secondary
 # The model allows for /admin view
 
 class ThemeAssociation(Base):
 	__tablename__ = 'theme_associations'
-	album_id = Column(String(), primary_key=True)
-	theme_name = Column(String(), primary_key=True)
+	album_id = Column(String(50), primary_key=True,)
+	theme_name = Column(String(50), primary_key=True)
+	#album_id = Column(String(50), ForeignKey('album.id'), primary_key=True,)
+	#theme_name = Column(String(50), ForeignKey('theme.name'), primary_key=True)
+
 
 theme_associations = Table('theme_associations', Base.metadata,
-	Column('album_id', String(), ForeignKey('album.id'), primary_key=True),	
-	Column('theme_name', String(), ForeignKey('theme.name'), primary_key=True),
+	Column('album_id', String(50), ForeignKey('album.id'), primary_key=True),	
+	Column('theme_name', String(50), ForeignKey('theme.name'), primary_key=True),
 	extend_existing=True
 )
 
 
 class MoodAssociation(Base):
 	__tablename__ = 'mood_associations'
-	album_id = Column(String(), primary_key=True)
-	mood_name = Column(String(), primary_key=True)
+	album_id = Column(String(50), primary_key=True)
+	mood_name = Column(String(50), primary_key=True)
+	#album_id = Column(String(50), primary_key=True)
+	#mood_name = Column(String(50), primary_key=True)
 
 mood_associations = Table('mood_associations', Base.metadata,
-	Column('album_id', String(), ForeignKey('album.id'), primary_key=True),
-	Column('mood_name', String(), ForeignKey('mood.name'), primary_key=True),
+	Column('album_id', String(50), ForeignKey('album.id'), primary_key=True),
+	Column('mood_name', String(50), ForeignKey('mood.name'), primary_key=True),
 	extend_existing=True
 )
 
@@ -118,29 +163,29 @@ mood_associations = Table('mood_associations', Base.metadata,
 # Define Album model.	
 # Attributes: id, artist, title, date_added
 # Relationships: themes, moods
-
+# 
 similar_album_association = Table(
 	'similar_album_associations', Base.metadata,
-	Column('parent_id', String(), ForeignKey('album.id'), index=True),
-	Column('child_id', String(), ForeignKey('album.id')),
+	Column('parent_id', String(50), ForeignKey('album.id'), index=True),
+	Column('child_id', String(50), ForeignKey('album.id')),
 	UniqueConstraint('parent_id', 'child_id', name='unique_similarRelations')
 	)
 
 class Album(Base):
 	__tablename__ = 'album'
-	id = 			Column(String(), primary_key=True)
-	artist = 		Column(String())
-	title = 		Column(String())
+	id = 			Column(String(50), primary_key=True)
+	artist = 		Column(String(50))
+	title = 		Column(String(50))
 	date_added = 	Column(DateTime, default=datetime.utcnow)
 	parent = 		Column(Boolean, default=True)
 	themes = 		relationship('Theme', secondary=theme_associations, backref=(backref('participants', lazy = 'dynamic')))
 	moods = 		relationship('Mood', secondary=mood_associations, backref=(backref('participants', lazy = 'dynamic')))
-
+	
 	children = relationship('Album',
 							secondary=similar_album_association,
 							primaryjoin=id==similar_album_association.c.parent_id,
 							secondaryjoin=id==similar_album_association.c.child_id)
-
+	
 	
 
 	def __repr__(self):
@@ -152,27 +197,10 @@ class Album(Base):
 		self.artist, self.title = process.scraper.getBasicInfo(id)
 		associateThemes(self)
 		associateMoods(self)
+#Base.metadata.create_all(bind=db)
+#session.commit()
 
 
-#****************************************************
-# Define Theme model. Meant to be accessed by AllMusic id string, ex. 'introspection-ma0000006318'
-# Attributes: id, name
-
-class Theme(Base):
-	__tablename__ = 'theme'
-	id = Column(String(), primary_key=True)
-	name = Column(String())
-
-
-#****************************************************
-# Define Mood model. Meant to be accessed by AllMusic id string, ex. 'detached-xa0000000707'
-# Attributes: id, name
-
-class Mood(Base):
-	__tablename__ = 'mood'
-	id = Column(String(), primary_key=True)
-	name = Column(String())
-#meta.create_all()
 #****************************************************
 # create /admin views:
 
@@ -187,8 +215,8 @@ class Mood(Base):
 #process.updateThemesDb.update(session, Theme)
 
 print("\n\n\n\n\n=======================================\n\n\n\n\n\n")
-Base.metadata.create_all(bind=db)
-session.commit()
+#Base.metadata.create_all(bind=db)
+#session.commit()
 print("\n\n\n\n\n=======================================\n\n\n\n\n\n")
 
 admin.add_view(FullModel(Album, session))
@@ -198,6 +226,8 @@ admin.add_view(FullModel(Mood, session))
 
 admin.add_view(FullModel(ThemeAssociation, session))
 admin.add_view(FullModel(MoodAssociation, session))
+
+
 
 #****************************************************
 # misc. functions:
@@ -221,7 +251,14 @@ def associateSimilar(album):
 
 
 	session.commit()
-
+"""
+newAlbumEntry = Album(process.scraper.getIDFromInfo('steely dan', 'aja'))
+try:
+	session.add(newAlbumEntry)
+	session.commit()
+except:
+	print("There was an error adding your album")
+"""
 #****************************************************
 # Render HTML: 
 
@@ -233,21 +270,33 @@ def index():
 			os.remove('test.db')
 
 	if request.method == 'POST':
+		print('hereeeeeeeeeeeeee now')
+		entryID = process.scraper.getIDFromInfo(request.form['artist'], request.form['title'])
 
-		newAlbumEntry = Album(process.scraper.getIDFromInfo(request.form['artist'], request.form['title']))
-		
-		#associateThemes(newAlbumEntry)
-		#associateMoods(newAlbumEntry)
-		associateSimilar(newAlbumEntry)
+		existing = session.query(Album).filter_by(id=entryID).one_or_none()
 
-		try:
-			session.add(newAlbumEntry)
-			session.commit()
-			return redirect('/')
-		except:
-			return "There was an error adding your album"
-
+		if existing != None:
+			if existing.parent == 0:
+				existing.parent = 1
+				#associateThemes(existing)
+				#associateMoods(existing) 
+				associateSimilar(existing)
+			else:
+				print("This album already exists as a parent in the database.")			
+		else:
+			newAlbumEntry = Album(process.scraper.getIDFromInfo(request.form['artist'], request.form['title']))
+			#associateThemes(newAlbumEntry)
+			#associateMoods(newAlbumEntry) 
+			associateSimilar(newAlbumEntry)
+			try:
+				session.add(newAlbumEntry)
+				session.commit()
+			except:
+				return "There was an error adding your album"
+		return redirect('/helpr4')
+			
 	else:
+		print("Regular GET page load.")
 		albumlist = session.query(Album).filter_by(parent=True).order_by(Album.date_added).all()
 		themeDict = defaultdict(list)
 		moodDict = defaultdict(list)

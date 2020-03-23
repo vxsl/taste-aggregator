@@ -63,14 +63,16 @@ def getBasicInfo(title, artist):
 	artistCandidate = artistSoup.find('a').text
 	result = {'id':idCandidates[0], 'title':titleCandidate, 'artist':artistCandidate}
 	"""
-	result = {'id':re.search("[a-z]+\d+", tooltip), 'title':idTitleSoup.find('a').text, 'artist':artistSoup.find('a').text}
+	determinedTitle = idTitleSoup.find('a').text
+	determinedArtist= artistSoup.find('a').text
+	result = {'id':re.search("[a-z]+\d+", tooltip), 'title':determinedTitle[:50], 'artist':determinedArtist[:50]}
 	return result
 
 def getBasicInfo(id):
 	albumPageSoup = BeautifulSoup(getPage(getURL(id)).content, "html.parser", parse_only=SoupStrainer("header"))
 	artist = albumPageSoup.find("h2", class_="album-artist").a.text
 	title = albumPageSoup.find("h1", class_="album-title").text.strip()
-	return artist, title
+	return artist[:50], title[:50]
 
 #***********************************************************************************************************************************
 def getURL(id):
@@ -151,7 +153,8 @@ def getSimilarAlbums(id, session, albumModel):
 			temp = albumModel(r[0])
 			temp.parent = False
 			similarAlbumList.append(temp)
-		
+	
+	print(f"DONE getting similar albums.")
 	return similarAlbumList
 
 #***********************************************************************************************************************************

@@ -1,101 +1,47 @@
-from flask import Flask, render_template, url_for, request, redirect, Response
+from flask import Flask, render_template, request, redirect
 
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy_utils.functions import database_exists
 
 from flask_admin import Admin
 from flask_admin.contrib.sqla import ModelView
 
 from datetime import datetime
 
-
-import sys
 import os
+
+from collections import defaultdict
+
+from sqlalchemy import Table, Column, Integer, String, Boolean, ForeignKey, UniqueConstraint, DateTime, MetaData
+from sqlalchemy.orm import relationship, backref, sessionmaker 
+from sqlalchemy.ext.declarative import declarative_base
+
+from sqlalchemy import create_engine
 
 import process.scraper
 import process.updateThemesDb	
 import process.updateMoodsDb
 
-from collections import defaultdict
-
-import sqlalchemy
-from sqlalchemy import Table, Column, Integer, String, Boolean, ForeignKey, UniqueConstraint, DateTime, MetaData
-from sqlalchemy.orm import relationship, backref, sessionmaker 
-from sqlalchemy.ext.associationproxy import association_proxy
-from sqlalchemy.ext.declarative import declarative_base
-
-
-from sqlalchemy import create_engine
-from sqlalchemy.orm import validates
-
-#import psycopg2
-
-
-
 import pymysql
-
-print("BEGINNING...")
-
 
 #****************************************************
 # init config:
 
 app = Flask(__name__)
-"""
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///test.db'
-app.config['SECRET_KEY'] = 'alpine'
-app.config['SQLALCHEMY_ECHO'] = False
-"""
 
 app.config['SQLALCHEMY_ECHO'] = True
 app.config['SECRET_KEY'] = 'alpine'
 
- 
-#db = SQLAlchemy(app)
-#
 hostname = '10.200.114.4'
 username = 'voxsol_helpr4'
 password = 'kGr1m$ruDM@nZ'
 database = 'voxsol_helpr4'
 
 
-"""
-#****************************************************
-# for development:
-if (len(sys.argv) == 2 and sys.argv[1] == 'local'):
-	#db = sqlalchemy.create_engine('postgresql+psycopg2://postgres:alpine@/?host=/cloudsql/helpr2:us-central1:helpr2db')
-	db = sqlalchemy.create_engine('postgresql+psycopg2://postgres:alpine@127.0.0.1:5432/test1', echo=True)
-
-db = sqlalchemy.create_engine('mysql+mysqldb://voxsol_helpr3:kGr1m$ruDM@nZ@10.200.114.4', echo=True)
-
-conn = db.connect()
-Base = declarative_base()
-meta = MetaData(bind=db)
-DBSession = sessionmaker(bind=db)
-session = DBSession()
-"""
-
-
-#
 db = create_engine(f'mysql+pymysql://{username}:{password}@{hostname}:3306/{database}').connect()
 Base = declarative_base()
 meta = MetaData(bind=db)
 DBSession = sessionmaker(bind=db)
 session = DBSession()
-"""
-class ThemeAssociation(Base):
-	__tablename__ = 'theme_associations'
-	album_id = Column(String(50), primary_key=True)
-	theme_name = Column(String(50), primary_key=True)
-
-theme_associations = Table('theme_associations', Base.metadata, Column('album_id', (String(50), ForeignKey('album.id'), primary_key=True),
-	Column('theme_name', String(50), ForeignKey('theme.name'), primary_key=True),
-	extend_existing=True
-)
-class Album(Base):
-	__tablename__ = 'album'
-	id = Column(Integer)
-"""
 
 admin = Admin(app)
 
@@ -124,7 +70,6 @@ class Mood(Base):
 	__tablename__ = 'mood'
 	id = Column(String(50), primary_key=True)
 	name = Column(String(50))
-#meta.create_all()
 
 #****************************************************
 # Define association tables and models for theme-album and mood-album relations.
@@ -135,8 +80,6 @@ class ThemeAssociation(Base):
 	__tablename__ = 'theme_associations'
 	album_id = Column(String(50), primary_key=True,)
 	theme_name = Column(String(50), primary_key=True)
-	#album_id = Column(String(50), ForeignKey('album.id'), primary_key=True,)
-	#theme_name = Column(String(50), ForeignKey('theme.name'), primary_key=True)
 
 
 theme_associations = Table('theme_associations', Base.metadata,
@@ -150,8 +93,6 @@ class MoodAssociation(Base):
 	__tablename__ = 'mood_associations'
 	album_id = Column(String(50), primary_key=True)
 	mood_name = Column(String(50), primary_key=True)
-	#album_id = Column(String(50), primary_key=True)
-	#mood_name = Column(String(50), primary_key=True)
 
 mood_associations = Table('mood_associations', Base.metadata,
 	Column('album_id', String(50), ForeignKey('album.id'), primary_key=True),
@@ -160,10 +101,8 @@ mood_associations = Table('mood_associations', Base.metadata,
 )
 
 #****************************************************
-# Define Album model.	
-# Attributes: id, artist, title, date_added
-# Relationships: themes, moods
-# 
+# Define association table for similar albums -- parents and children.
+
 similar_album_association = Table(
 	'similar_album_associations', Base.metadata,
 	Column('parent_id', String(50), ForeignKey('album.id'), index=True),
@@ -171,6 +110,11 @@ similar_album_association = Table(
 	UniqueConstraint('parent_id', 'child_id', name='unique_similarRelations')
 	)
 
+#****************************************************
+# Define Album model.	
+# Attributes: id, artist, title, date_added, parent (bool)
+# Relationships: themes, moods, children
+# 
 class Album(Base):
 	__tablename__ = 'album'
 	id = 			Column(String(50), primary_key=True)
@@ -186,8 +130,6 @@ class Album(Base):
 							primaryjoin=id==similar_album_association.c.parent_id,
 							secondaryjoin=id==similar_album_association.c.child_id)
 	
-	
-
 	def __repr__(self):
 		return '<Album %r>' % self.id
 
@@ -197,37 +139,6 @@ class Album(Base):
 		self.artist, self.title = process.scraper.getBasicInfo(id)
 		associateThemes(self)
 		associateMoods(self)
-#Base.metadata.create_all(bind=db)
-#session.commit()
-
-
-#****************************************************
-# create /admin views:
-
-"""if database_exists(app.config['SQLALCHEMY_DATABASE_URI']) == False:
-		
-		create_all()
-		process.updateMoodsDb.update(db, Mood)
-		process.updateThemesDb.update(db, Theme)"""
-
-#session.add(Mood(id='wry-xa0000001144', name='Wry Test'))
-#process.updateMoodsDb.update(session, Mood)
-#process.updateThemesDb.update(session, Theme)
-
-print("\n\n\n\n\n=======================================\n\n\n\n\n\n")
-#Base.metadata.create_all(bind=db)
-#session.commit()
-print("\n\n\n\n\n=======================================\n\n\n\n\n\n")
-
-admin.add_view(FullModel(Album, session))
-
-admin.add_view(FullModel(Theme, session))
-admin.add_view(FullModel(Mood, session))
-
-admin.add_view(FullModel(ThemeAssociation, session))
-admin.add_view(FullModel(MoodAssociation, session))
-
-
 
 #****************************************************
 # misc. functions:
@@ -248,17 +159,27 @@ def associateSimilar(album):
 			print(f"SIMILAR ALBUM:{newAlbum}")
 			album.children.append(newAlbum)
 			#newAlbum.parents.append(album)
-
-
-	session.commit()
+			
+#****************************************************
+# populate the database:
 """
-newAlbumEntry = Album(process.scraper.getIDFromInfo('steely dan', 'aja'))
-try:
-	session.add(newAlbumEntry)
-	session.commit()
-except:
-	print("There was an error adding your album")
+Base.metadata.create_all(bind=db)
+process.updateMoodsDb.update(session, Mood)
+process.updateThemesDb.update(session, Theme)
+session.commit()
 """
+
+#****************************************************
+# create /admin views:
+#
+admin.add_view(FullModel(Album, session))
+
+admin.add_view(FullModel(Theme, session))
+admin.add_view(FullModel(Mood, session))
+
+admin.add_view(FullModel(ThemeAssociation, session))
+admin.add_view(FullModel(MoodAssociation, session))
+
 #****************************************************
 # Render HTML: 
 
@@ -285,7 +206,7 @@ def index():
 				print("This album already exists as a parent in the database.")			
 		else:
 			newAlbumEntry = Album(process.scraper.getIDFromInfo(request.form['artist'], request.form['title']))
-			#associateThemes(newAlbumEntry)
+			#associateThemes(newAlbumEntry)	
 			#associateMoods(newAlbumEntry) 
 			associateSimilar(newAlbumEntry)
 			try:

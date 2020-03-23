@@ -26,29 +26,7 @@ def getIDFromURL(url):
 	
 	id = re.search("[a-z]+\d+", url)
 	return id[0]
-	
-"""
-	if args[1]:
-		title = args[0]
-		artist = args[1]
 
-		searchPage = requests.get("https://www.allmusic.com/search/albums/" + artist.replace(" ", "+") + "+" + title.replace(" ", "+"), headers={'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/38.0.2125.111 Safari/537.36'})
-
-		searchSoup = BeautifulSoup(searchPage.content, "html.parser", parse_only=SoupStrainer("div", class_="title"))
-
-		tooltip = searchSoup.find('a').get('data-tooltip')
-		id = re.search("[a-z]+\d+", tooltip)
-
-		return id[0]
-
-	# OVERLOADING:
-	# params (id)
-	elif args[0]:
-		url = args[0]
-		id = re.search("[a-z]+\d+", url)
-		print(f"\n\nHERE:{id}\n\n\n")
-		return id[0]
-"""		
 #***********************************************************************************************************************************
 def getBasicInfo(title, artist):
 	searchPage = requests.get("https://www.allmusic.com/search/albums/" + artist.replace(" ", "+") + "+" + title.replace(" ", "+"), headers={'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/38.0.2125.111 Safari/537.36'})
@@ -57,12 +35,7 @@ def getBasicInfo(title, artist):
 	artistSoup = BeautifulSoup(searchPage.content, "html.parser", parse_only=SoupStrainer("div", class_="artist"))
 
 	tooltip = idTitleSoup.find('a').get('data-tooltip')
-	"""
-	idCandidates = re.search("[a-z]+\d+", tooltip)
-	titleCandidate = idTitleSoup.find('a').text
-	artistCandidate = artistSoup.find('a').text
-	result = {'id':idCandidates[0], 'title':titleCandidate, 'artist':artistCandidate}
-	"""
+	
 	determinedTitle = idTitleSoup.find('a').text
 	determinedArtist= artistSoup.find('a').text
 	result = {'id':re.search("[a-z]+\d+", tooltip), 'title':determinedTitle[:50], 'artist':determinedArtist[:50]}

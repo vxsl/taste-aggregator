@@ -31,10 +31,10 @@ app = Flask(__name__)
 app.config['SQLALCHEMY_ECHO'] = True
 app.config['SECRET_KEY'] = 'alpine'
 
-hostname = '10.200.114.4'
-username = 'voxsol_helpr4'
-password = 'kGr1m$ruDM@nZ'
-database = 'voxsol_helpr4'
+hostname = 'localhost'
+username = 'root'
+password = 'alpine'
+database = 'taste-aggregator'
 
 
 db = create_engine(f'mysql+pymysql://{username}:{password}@{hostname}:3306/{database}').connect()
